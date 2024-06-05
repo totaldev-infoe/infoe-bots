@@ -1,3 +1,3 @@
 # infoe-bots
 
-test
+Instructions under construction.. 
