@@ -8,7 +8,7 @@ import (
 
 var mangoCmd = &cobra.Command{
 	Use:   "mango",
-	Short: "Replies with pong if someone replies with ping",
+	Short: "Replies if someone replies to mango",
 	Long:  "N/A",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Running mango function")
