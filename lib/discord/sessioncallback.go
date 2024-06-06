@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func Call(DiscordToken string, handler interface{}) {
+func Call(DiscordToken string, handlers ...interface{}) {
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + DiscordToken)
 	if err != nil {
@@ -16,11 +16,13 @@ func Call(DiscordToken string, handler interface{}) {
 		return
 	}
 
-	// Register the messageCreate func as a callback for MessageCreate events.
-	dg.AddHandler(handler)
+	// Register each handler passed in as a callback for appropriate events.
+	for _, handler := range handlers {
+		dg.AddHandler(handler)
+	}
 
-	// In this example, we only care about receiving message events.
-	dg.Identify.Intents = discordgo.IntentsGuildMessages
+	// In this example, we only care about receiving message events and reactions.
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuildMessageReactions
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
