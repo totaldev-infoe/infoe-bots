@@ -6,6 +6,7 @@ import (
 	"github.com/totaldev-infoe/infoe-bots/lib/discord"
 	"log"
 	"strings"
+	"time"
 )
 
 var (
@@ -15,7 +16,10 @@ var (
 	AllowedChannelsSubString = []string{
 		"general", "movebot",
 	}
+	UserCache = make(map[string]time.Time)
 )
+
+const OneDay = 24 * time.Hour
 
 func Mango(DiscordToken string) {
 	discord.Call(DiscordToken, replyBackToMangoReplyWithoutRole, handleReactionAdd)
@@ -38,6 +42,11 @@ func replyBackToMangoReplyWithoutRole(s *discordgo.Session, m *discordgo.Message
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
+	// Check if the user has triggered the bot in the last 24 hours
+	if lastTrigger, exists := UserCache[m.Author.ID]; exists && time.Since(lastTrigger) < OneDay {
 		return
 	}
 
@@ -74,29 +83,29 @@ func replyBackToMangoReplyWithoutRole(s *discordgo.Session, m *discordgo.Message
 	}
 
 	// User shouldn't have role now
-
 	// Check if the message is a reply
-	if m.Message.ReferencedMessage != nil {
+	if m.Message.ReferencedMessage != nil || userMentioned(m.Mentions, UserInQuestion) {
 
-		// Get the original message
-		originalMessage, err := s.ChannelMessage(m.ChannelID, m.Message.ReferencedMessage.ID)
-		if err != nil {
-			log.Println("Error getting the original message:", err)
-			return
+		// Get the original message if it's a reply
+		var originalMessage *discordgo.Message
+		if m.Message.ReferencedMessage != nil {
+			originalMessage, err = s.ChannelMessage(m.ChannelID, m.Message.ReferencedMessage.ID)
+			if err != nil {
+				log.Println("Error getting the original message:", err)
+				return
+			}
 		}
 
-		// Check if the original message author username is "totaldev"
-		if originalMessage.Author.Username == UserInQuestion {
-			// Add your custom action here
+		// Check if the original message author username is "totaldev" or if the message mentions "totaldev"
+		if (originalMessage != nil && originalMessage.Author.Username == UserInQuestion) || userMentioned(m.Mentions, UserInQuestion) {
 			customMessage := fmt.Sprintf(`
-			Hey, %s! ,
-			We've detected that you're attempting to contact our neighborhood new grad, %s. 
+			Hey, %s!
+We've detected that you're attempting to contact our neighborhood new grad, %s. 
 			
-			There's a possibility you've been blocked by %s. Please react to one of his messages and if your discord client doesn't allow you to react, that means that %s blocked you. Please utilize this information however you see fit!
+There's a possibility you've been blocked by %s. Please react to one of his messages and if your discord client doesn't allow you to react, that means that mango blocked you. Please utilize this information however you see fit!
 			
-			To unsubscribe from further notifications, please react to this message!
-`, m.Author.Username, originalMessage.Author.Username, originalMessage.Author.Username, originalMessage.Author.Username)
-
+To unsubscribe from further notifications, please react to this message! To prevent abuse, we limit this notice to once per day. 
+`, m.Author.Username, UserInQuestion, UserInQuestion)
 			reply := &discordgo.MessageSend{
 				Content:   customMessage,
 				Reference: &discordgo.MessageReference{MessageID: m.ID},
@@ -106,6 +115,9 @@ func replyBackToMangoReplyWithoutRole(s *discordgo.Session, m *discordgo.Message
 				log.Println("Error sending the message:", err)
 				return
 			}
+
+			// Update the cache with the current timestamp
+			UserCache[m.Author.ID] = time.Now()
 			return
 		}
 	}
@@ -128,4 +140,14 @@ func handleReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 			log.Println("Error adding role:", err)
 		}
 	}
+}
+
+// Check if UserInQuestion is mentioned in the message
+func userMentioned(mentions []*discordgo.User, username string) bool {
+	for _, mention := range mentions {
+		if strings.ToLower(mention.Username) == strings.ToLower(username) {
+			return true
+		}
+	}
+	return false
 }
