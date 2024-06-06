@@ -100,12 +100,12 @@ func replyBackToMangoReplyWithoutRole(s *discordgo.Session, m *discordgo.Message
 		if (originalMessage != nil && originalMessage.Author.Username == UserInQuestion) || userMentioned(m.Mentions, UserInQuestion) {
 			customMessage := fmt.Sprintf(`
 			Hey, %s!
-We've detected that you're attempting to contact our neighborhood new grad, %s. 
+You're attempting to contact our neighborhood new grad, %s. 
 			
-There's a possibility you've been blocked by %s. Please react to one of his messages and if your discord client doesn't allow you to react, that means that mango blocked you. Please utilize this information however you see fit!
+FYI, there's a possibility %s blocked you. If you're unable to react to one of %s's messages then you've been blocked. 
 			
-To unsubscribe from further notifications, please react to this message! To prevent abuse, we limit this notice to once per day. 
-`, m.Author.Username, UserInQuestion, UserInQuestion)
+To prevent abuse, we limit this notice to once per day. Unsubscribe to future notifications by reacting to this message!
+`, m.Author.Username, UserInQuestion, UserInQuestion, UserInQuestion)
 			reply := &discordgo.MessageSend{
 				Content:   customMessage,
 				Reference: &discordgo.MessageReference{MessageID: m.ID},
