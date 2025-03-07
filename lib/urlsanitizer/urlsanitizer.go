@@ -8,8 +8,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var instagramRegex = regexp.MustCompile(`https://www\.instagram\.com/[^?]+\?igsh=[^&\s]+`)
-var tiktokRegex = regexp.MustCompile(`https://(?:www\.)?tiktok\.com/[^/]+/?$`)
+var (
+	instagramRegex = regexp.MustCompile(`https://www\.instagram\.com/[^?]+\?igsh=[^&\s]+`)
+	tiktokRegex = regexp.MustCompile(`https://(?:www\.)?tiktok\.com/[^/]+/?$`)
+	// Match both x.com and twitter.com URLs
+	twitterRegex = regexp.MustCompile(`https://(?:(?:www\.)?(?:twitter|x)\.com/[^/]+/status/\d+)(?:\?[^\s]*)?`)
+)
 
 func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore messages from the bot itself
@@ -53,6 +57,42 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, message)
 		}
 		return
+	}
+
+	// Handle X/Twitter links
+	if twitterMatch := twitterRegex.FindString(content); twitterMatch != "" {
+		// Extract the path part of the URL (everything after the domain)
+		pathStart := strings.Index(twitterMatch, ".com/")
+		if pathStart != -1 {
+			path := twitterMatch[pathStart+5:]
+			// Remove any query parameters
+			if queryStart := strings.Index(path, "?"); queryStart != -1 {
+				path = path[:queryStart]
+			}
+			// Create fxtwitter URL
+			fxURL := "https://fxtwitter.com/" + path
+
+			// Delete the original message
+			err := s.ChannelMessageDelete(m.ChannelID, m.ID)
+			if err != nil {
+				s.ChannelMessageSend(m.ChannelID, "Failed to remove message with X/Twitter link")
+				return
+			}
+
+			// Construct the message
+			message := fmt.Sprintf("🔗 Converted to fxtwitter for better embeds (original message from <@%s>)\n\n", m.Author.ID)
+			
+			// Add any additional content from the original message
+			extraContent := strings.TrimSpace(strings.Replace(content, twitterMatch, "", 1))
+			if extraContent != "" {
+				message += extraContent + "\n"
+			}
+			message += fxURL
+
+			// Send the message
+			s.ChannelMessageSend(m.ChannelID, message)
+			return
+		}
 	}
 
 	// Warn about potentially unsafe TikTok links
