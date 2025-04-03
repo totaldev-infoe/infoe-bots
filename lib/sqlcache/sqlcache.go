@@ -12,6 +12,7 @@ import (
 // OptOutData represents the structure of our opt-out data
 type OptOutData struct {
 	Users map[string]map[string]time.Time // map[userID]map[feature]timestamp
+	LastSent map[string]map[string]time.Time // map[userID]map[feature]lastMessageTimestamp
 }
 
 var (
@@ -36,6 +37,7 @@ func Initialize() {
 		// Initialize the opt-out data structure
 		optOutData = OptOutData{
 			Users: make(map[string]map[string]time.Time),
+			LastSent: make(map[string]map[string]time.Time),
 		}
 
 		// Load existing data if available
@@ -166,4 +168,49 @@ func ListOptOuts() map[string][]string {
 		result[userID] = featureList
 	}
 	return result
+}
+
+// RecordMessageSent records when a message was sent to a user for a specific feature
+func RecordMessageSent(userID, feature string) error {
+	Initialize()
+	
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+	
+	// Initialize user's feature map if it doesn't exist
+	if optOutData.LastSent[userID] == nil {
+		optOutData.LastSent[userID] = make(map[string]time.Time)
+	}
+	
+	// Record current time
+	optOutData.LastSent[userID][feature] = time.Now()
+	
+	// Save to file
+	return saveData()
+}
+
+// CanSendMessage checks if enough time has passed since the last message
+// Returns true if a message can be sent (cooldown period has passed or no previous message)
+func CanSendMessage(userID, feature string, cooldownDuration time.Duration) bool {
+	Initialize()
+	
+	fileMutex.RLock()
+	defer fileMutex.RUnlock()
+	
+	// Check if user exists in last sent data
+	userFeatures, exists := optOutData.LastSent[userID]
+	if !exists {
+		// No record of previous messages, can send
+		return true
+	}
+	
+	// Check if feature exists in user's last sent
+	lastSent, exists := userFeatures[feature]
+	if !exists {
+		// No record for this feature, can send
+		return true
+	}
+	
+	// Check if cooldown period has passed
+	return time.Since(lastSent) > cooldownDuration
 }

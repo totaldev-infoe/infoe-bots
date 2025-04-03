@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/totaldev-infoe/infoe-bots/lib/sqlcache"
@@ -12,6 +13,9 @@ import (
 const (
 	// Feature name for opt-out tracking
 	featureName = "llm_promoter"
+	
+	// Cooldown duration between messages to the same user (6 hours)
+	cooldownDuration = 6 * time.Hour
 )
 
 var (
@@ -81,6 +85,11 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Check if message contains complaints about hosted LLMs
 	if llmComplaintRegex.MatchString(content) {
+		// Check if we're in cooldown period for this user
+		if !sqlcache.CanSendMessage(m.Author.ID, featureName, cooldownDuration) {
+			// Still in cooldown, don't send a message
+			return
+		}
 		// Construct the response message
 		message := fmt.Sprintf("Hey <@%s>, I noticed you might be having issues with a hosted LLM service. "+
 			"Have you considered trying local LLMs? Here are some great options:\n\n"+
@@ -104,5 +113,8 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 		}
+		
+		// Record that we sent a message to this user
+		sqlcache.RecordMessageSent(m.Author.ID, featureName)
 	}
 }
