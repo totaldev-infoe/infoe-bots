@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	instagramRegex := regexp.MustCompile(`^(https?://)?(www\.)?instagram\.com/[^?]+\?igsh=[^&\s]+`)
+	instagramRegex = regexp.MustCompile(`^(https?://)?(www\.)?instagram\.com/[^?]+\?igsh=[^&\s]+`)
 	tiktokRegex = regexp.MustCompile(`https://(?:www\.)?tiktok\.com/[^/]+/?$`)
 	// Match both x.com and twitter.com URLs
 	twitterRegex = regexp.MustCompile(`https://(?:(?:www\.)?(?:twitter|x)\.com/[^/]+/status/\d+)(?:\?[^\s]*)?`)
