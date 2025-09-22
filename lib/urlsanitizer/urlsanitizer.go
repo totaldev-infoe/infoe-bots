@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	instagramRegex = regexp.MustCompile(`^(https?://)?(www\.)?instagram\.com/[^?]+\?igsh=[^&\s]+`)
-	tiktokRegex = regexp.MustCompile(`https://(?:www\.)?tiktok\.com/[^/]+/?$`)
+	instagramRegex = regexp.MustCompile(`https://www\.instagram\.com/[^?]+\?igsh=[^&\s]+`)
+	tiktokRegex    = regexp.MustCompile(`https://(?:www\.)?tiktok\.com/(?:@[^/]+/?|t/[^/]+/?)$`)
 	// Match both x.com and twitter.com URLs
 	twitterRegex = regexp.MustCompile(`https://(?:(?:www\.)?(?:twitter|x)\.com/[^/]+/status/\d+)(?:\?[^\s]*)?`)
 )
@@ -35,7 +35,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		// Construct the message with warning and attribution
 		warning := fmt.Sprintf("🔒 This message is reposted, original message from <@%s>.\nℹ️ Using igsh can potentially expose your Instagram profile when others click on it as Instagram can recommend your profile to them in the future.\n\n", m.Author.ID)
-		
+
 		// Add the clean URL and any additional content
 		message := warning + cleanURL
 		if len(content) > len(cleanURL) {
@@ -45,7 +45,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 				message = warning + extraContent + "\n" + cleanURL
 			}
 		}
-		
+
 		// Send the reposted message as a reply first
 		_, err = s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
 			MessageID: m.ID,
@@ -81,7 +81,7 @@ func HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			// Construct the message
 			message := fmt.Sprintf("🔗 Converted to fxtwitter for better embeds (original message from <@%s>)\n\n", m.Author.ID)
-			
+
 			// Add any additional content from the original message
 			extraContent := strings.TrimSpace(strings.Replace(content, twitterMatch, "", 1))
 			if extraContent != "" {
